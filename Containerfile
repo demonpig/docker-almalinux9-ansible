@@ -1,5 +1,6 @@
-FROM centos:8
-LABEL maintainer="Jeff Geerling"
+FROM almalinux:9
+LABEL maintainer="Max Mitschke"
+
 ENV container=docker
 
 ENV pip_packages "ansible"
@@ -15,15 +16,11 @@ rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
 rm -f /lib/systemd/system/basic.target.wants/*;\
 rm -f /lib/systemd/system/anaconda.target.wants/*;
 
-# Fix EOL Mirror issue
-RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Linux-*
-RUN sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Linux-*
-
 # Install requirements.
-RUN yum -y install rpm centos-release dnf-plugins-core \
- && yum -y update \
- && yum -y config-manager --set-enabled powertools \
- && yum -y install \
+RUN dnf -y install rpm almalinux-release dnf-plugins-core \
+ && dnf -y update \
+ && dnf -y config-manager --set-enabled crb \
+ && dnf -y install \
       epel-release \
       initscripts \
       sudo \
@@ -33,7 +30,7 @@ RUN yum -y install rpm centos-release dnf-plugins-core \
       python3 \
       python3-pip \
       python3-pyyaml \
- && yum clean all
+ && dnf clean all
 
 # Upgrade pip to latest version.
 RUN pip3 install --upgrade pip
@@ -42,11 +39,11 @@ RUN pip3 install --upgrade pip
 RUN pip3 install $pip_packages
 
 # Disable requiretty.
-RUN sed -i -e 's/^\(Defaults\s*requiretty\)/#--- \1/'  /etc/sudoers
+RUN sed -i -e 's/^\(Defaults\s*requiretty\)/#--- \1/' /etc/sudoers
 
-# Install Ansible inventory file.
+# Setup the default Ansible inventory file
 RUN mkdir -p /etc/ansible
-RUN echo -e '[local]\nlocalhost ansible_connection=local' > /etc/ansible/hosts
+RUN echo -e 'localhost ansible_host=127.0.0.1 ansible_connection=local' > /etc/ansible/hosts
 
 VOLUME ["/sys/fs/cgroup"]
 CMD ["/usr/lib/systemd/systemd"]
