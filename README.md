@@ -14,3 +14,13 @@ This repo was forked from Jeff Geerling's [docker-centos8-ansible](https://githu
   ```bash
   podman build -f ./Containerfile --no-cache -t localhost/docker-almalinux9-ansible:latest .
   ```
+
+### Usage
+
+- Run the image with one of the following commands
+  ```
+  docker run -it --rm -d -v /sys/fs/cgroup:/sys/fs/cgroup:rw --privileged localhost/docker-almalinux9-ansible:latest
+  ```
+  ```
+  podman run -it --rm -d -v /sys/fs/cgroup:/sys/fs/cgroup:rw --privileged localhost/docker-almalinux9-ansible:latest
+  ```
