@@ -3,7 +3,12 @@ LABEL maintainer="Max Mitschke"
 
 ENV container=docker
 
-ENV pip_packages "ansible"
+# Install requirements for systemd
+RUN dnf makecache && dnf upgrade -y \
+  && dnf -y install dnf-plugins-core \
+  && dnf -y config-manager --set-enabled crb \
+  && dnf install -y initscripts sudo \
+  && dnf clean all
 
 # Install systemd -- See https://hub.docker.com/_/centos/
 RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == \
@@ -16,34 +21,17 @@ rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
 rm -f /lib/systemd/system/basic.target.wants/*;\
 rm -f /lib/systemd/system/anaconda.target.wants/*;
 
-# Install requirements.
-RUN dnf -y install rpm almalinux-release dnf-plugins-core \
- && dnf -y update \
- && dnf -y config-manager --set-enabled crb \
- && dnf -y install \
-      epel-release \
-      initscripts \
-      sudo \
-      which \
-      hostname \
-      libyaml-devel \
-      python3 \
-      python3-pip \
-      python3-pyyaml \
- && dnf clean all
+# Install package dependences for Ansible
+# openjdk libs are for ansible-rulebook
+RUN dnf makecache \
+  && dnf install -y python311 java-17-openjdk-headless \
+  && dnf clean all
 
-# Upgrade pip to latest version.
-RUN pip3 install --upgrade pip
+# Setup virtual environment
+ADD ./files/ /
+RUN sh /usr/local/sbin/setup-env.sh
 
-# Install Ansible via Pip.
-RUN pip3 install $pip_packages
-
-# Disable requiretty.
-RUN sed -i -e 's/^\(Defaults\s*requiretty\)/#--- \1/' /etc/sudoers
-
-# Setup the default Ansible inventory file
-RUN mkdir -p /etc/ansible
-RUN echo -e 'localhost ansible_host=127.0.0.1 ansible_connection=local' > /etc/ansible/hosts
+ENV PATH="/opt/ansible/bin:$PATH"
 
 VOLUME ["/sys/fs/cgroup"]
 CMD ["/usr/lib/systemd/systemd"]
